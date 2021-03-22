@@ -10,6 +10,9 @@ import java.util.Objects;
  * (the number of the page on which it resides) and its entry number (the
  * record's index in the page). A RecordId is a pair of the page number and
  * entry number.
+ * 这里没太懂, 只知道组成部分是 页编号和页的记录索引
+ * 那RecordId 是什么呢? 这条记录对应的id?或者说是主键?
+ *
  */
 public class RecordId implements Comparable<RecordId> {
     private long pageNum;

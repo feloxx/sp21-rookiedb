@@ -6,7 +6,10 @@ import java.nio.charset.Charset;
 
 /**
  * A DataBox is an element of one of the primitive types specified in Type.java.
- * You can create
+ * DataBox是Type.java中指定的一种基本类型的元素。
+ * 基础类型的抽象类
+ *
+ * You can create 你可以这样来创建
  *   - booleans with new BoolDataBox(b),
  *   - integers with new IntDataBox(i),
  *   - floats with new FloatDataBox(f),

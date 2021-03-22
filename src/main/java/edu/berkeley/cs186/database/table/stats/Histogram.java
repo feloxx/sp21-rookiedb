@@ -12,6 +12,7 @@ import edu.berkeley.cs186.database.databox.TypeId;
  * A histogram maintains approximate statistics about a (potentially large) set
  * of values without explicitly storing the values. For example, given the
  * following set of numbers:
+ * 直方图的统计信息
  *
  *   4, 9, 10, 10, 10, 13, 15, 16, 18, 18, 22, 23, 25, 26, 24, 42, 42, 42
  *

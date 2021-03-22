@@ -17,6 +17,8 @@ import edu.berkeley.cs186.database.databox.TypeId;
 /**
  * The schema of a table includes the name and type of every one of its
  * fields. For example, the following schema:
+ * 表的模式包括每个表的名称和类型
+ * 字段。例如，下面的模式:
  *
  *   Schema s = new Schema()
  *      .add("x", Type.intType())
@@ -165,6 +167,10 @@ public class Schema {
     /**
      * Verifies that a record matches the given schema. Performs the following
      * implicit casts:
+     * 验证一个记录是否与给定的模式匹配。执行以下
+     * 隐式类型转换:
+     * 没看懂这里的隐式类型转换
+     *
      * - String's of the wrong size are cast to the expected size of the schema
      * - Int's will be cast to floats if a float is expected
      * @param record

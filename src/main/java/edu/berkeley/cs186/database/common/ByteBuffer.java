@@ -4,12 +4,18 @@ import java.nio.*;
 
 /**
  * Wrapper around java.nio.ByteBuffer to implement our Buffer interface.
+ * 封装nio,实现自己的缓存区接口
  *
  * Buffers are used to store and sequences of bytes, for example when we want
  * to serialize information into a byte sequence that can be stored on disk
  * and deserialize the sequence back into a Java object. Put methods will return
  * the buffer itself allowing you to chain together calls to put. For example,
  * calling:
+ * 缓冲区用于存储字节序列，例如当我们需要时
+ * 将信息序列化成可存储在磁盘上的字节序列
+ * 并将序列反序列化回Java对象中。Put方法将返回
+ * 缓冲区本身允许您将调用链接到put上。例如,
+ * 调用:
  *
  * ByteBuffer b = ByteBuffer.allocate(6);
  * // Buffer contents: empty
@@ -19,6 +25,8 @@ import java.nio.*;
  * Calling get will deserialize bytes from the beginning of the buffer (or the
  * specified index) and move the beginning of the buffer to the next unread
  * byte. Reusing the buffer from above:
+ * 调用get将反序列化缓冲区开头的字节(或指定索引)，并将缓冲区的开始位置移到下一个未读位置
+ * 字节。重用上面的缓冲区:
  *
  * char char1 = b.getChar(); // char1 = 'c'
  * // Buffer contents: |0x73, 0x00, 0x00, 0x00, 0xBA|
@@ -32,9 +40,16 @@ import java.nio.*;
  * serialized. For example, calling b.getInt() immediately would have attempted
  * to read the first 4 bytes (0x63, 0x73, 0x00, 0x00) in as an integer, despite
  * the first two bytes being part of characters, and not an integer.
+ * 缓冲区无法知道原始数据类型是什么，所以
+ * 以同样的方式反序列化内容是很重要的
+ * 序列化的。例如，立即调用b.getInt()将会尝试
+ * 将前4个字节(0x63, 0x73, 0x00, 0x00)作为整数读入，尽管
+ * 前两个字节是字符的一部分，而不是整数。
  *
  * In general you'll want to call your get operations in the same order as the
  * put operations took place.
+ * 通常，您会希望以相同的顺序调用get操作
+ * put行动开始了。
  */
 public class ByteBuffer implements Buffer {
     private java.nio.ByteBuffer buf;

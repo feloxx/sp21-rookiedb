@@ -5,6 +5,7 @@ import java.util.HashSet;
 
 /**
  * A histogram bucket
+ * 直方图 的 桶
  */
 public class Bucket {
     private float start;

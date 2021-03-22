@@ -18,7 +18,9 @@ import edu.berkeley.cs186.database.table.stats.TableStats;
  * # Overview
  * A Table represents a database table with which users can insert, get,
  * update, and delete records:
+ * table 是一个数据库表，用户可以使用该表插入、获取、更新、删除记录:
  *
+ * 下面的例子就是演示,创建schema table 然后 插入,继续,更新,删除的代码流程
  *   // Create a brand new table t(x: int, y: int) which is persisted in the
  *   // the heap file associated with `pageDirectory`.
  *   List<String> fieldNames = Arrays.asList("x", "y");
@@ -35,14 +37,18 @@ import edu.berkeley.cs186.database.table.stats.TableStats;
  *   Record rb = t.getRecord(rid);
  *   t.deleteRecord(rid);
  *
- * # Persistence
+ * # Persistence 持久化
  * Every table is persisted in its own PageDirectory object (passed into the constructor),
  * which interfaces with the BufferManager and DiskSpaceManager to save it to disk.
+ * 每个表都持久化在它自己的PageDirectory对象中(传递到构造函数中)，
+ * 它与BufferManager和DiskSpaceManager接口，将其保存到磁盘。
  *
  * A table can be loaded again by simply constructing it with the same parameters.
+ * 只需使用相同的参数构造表，就可以再次加载表。
  *
- * # Storage Format
+ * # Storage Format 存储格式
  * Now, we discuss how tables serialize their data.
+ * 现在，我们讨论表如何序列化它们的数据。
  *
  * All pages are data pages - there are no header pages, because all metadata is
  * stored elsewhere (as rows in the _metadata.tables table). Every data

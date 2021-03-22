@@ -20,6 +20,12 @@ import edu.berkeley.cs186.database.table.RecordId;
  * leaf is serialized. For example, here is an illustration of two order 2
  * leafs connected together:
  *
+ * leaf是B+树的叶子结点.
+ * 阶数为d的B+树中的每个叶子都存储着d和2d（键，记录ID）对之间的指针，以及指向其右兄弟（即其右兄弟的页）的指针。
+ * 而且，每个叶结点都被序列化并持久化在单个页上;
+ * 叶子结点是如何序列化的可以查看 toBytes和fromBytes方法.
+ * 例如，下面是两个连接在一起的2阶叶结点的图示：
+ *
  *   leaf 1 (stored on some page)          leaf 2 (stored on some other page)
  *   +-------+-------+-------+-------+     +-------+-------+-------+-------+
  *   | k0:r0 | k1:r1 | k2:r2 |       | --> | k3:r3 | k4:r4 |       |       |
@@ -27,6 +33,7 @@ import edu.berkeley.cs186.database.table.RecordId;
  */
 class LeafNode extends BPlusNode {
     // Metadata about the B+ tree that this node belongs to.
+    // B+树的元数据信息
     private BPlusTreeMetadata metadata;
 
     // Buffer manager
@@ -100,6 +107,7 @@ class LeafNode extends BPlusNode {
     private List<DataBox> keys;
     private List<RecordId> rids;
 
+    // 叶子节点右边的兄弟
     // If this leaf is the rightmost leaf, then rightSibling is Optional.empty().
     // Otherwise, rightSibling is Optional.of(n) where n is the page number of
     // this leaf's right sibling.
@@ -110,6 +118,9 @@ class LeafNode extends BPlusNode {
      * Construct a brand new leaf node. This constructor will fetch a new pinned
      * page from the provided BufferManager `bufferManager` and persist the node
      * to that page.
+     * 构造一个全新的叶节点。这个构造函数将获取一个新的pinned
+     * 从提供的BufferManager ' BufferManager '中获取页面，并持久化节点
+     * 这个页面。
      */
     LeafNode(BPlusTreeMetadata metadata, BufferManager bufferManager, List<DataBox> keys,
              List<RecordId> rids, Optional<Long> rightSibling, LockContext treeContext) {
@@ -376,8 +387,39 @@ class LeafNode extends BPlusNode {
         // Note: LeafNode has two constructors. To implement fromBytes be sure to
         // use the constructor that reuses an existing page instead of fetching a
         // brand new one.
+        // 注意：LeafNode有两个构造方法。
+        // 要实现fromBytes，请使用 能够重用现有页的 而不是 获取全新页的 构造函数。
 
-        return null;
+        // 我的思路
+        // 先拿到当先叶子节点的页,然后将页里面的数据拿出来
+        // 与页交互操作,就是操作页里的ByteBuffer
+        // 然后从ByteBuffer里拿出 sibling keys rid entry等信息
+        // 最后需要注意上面的 Note 关键信息是需要使用构造方法来重现页,而不是去构造一个全新的
+
+        // 获得页
+        Page page =  bufferManager.fetchPage(treeContext, pageNum);
+        Buffer buffer = page.getBuffer();
+
+        // 获得结点类型 0为内部结点 1为叶子结点
+        byte nodeType = buffer.get();
+        assert(nodeType == (byte) 1);
+
+        // 获得右边的兄弟结点
+        long siblingTemp = buffer.getLong();
+        Optional<Long> sibling = Optional.ofNullable(siblingTemp == Long.BYTES ? null : siblingTemp);
+
+        // 获得 DataBox 和 RecordId
+        int numPairs = buffer.getInt();
+        List<DataBox> keys = new ArrayList<>();
+        List<RecordId> rids = new ArrayList<>();
+        for (int i = 0; i < numPairs; i++) {
+            keys.add(DataBox.fromBytes(buffer, metadata.getKeySchema()));
+            rids.add(RecordId.fromBytes(buffer));
+        }
+
+        // 这个地方一定要多看看上面的构造方法实现,区分清楚,我这这个地方就卡了两天;
+        // 主要是疏忽了前面的注释提醒,也不够细心的观察构造方法的区别;
+        return new LeafNode(metadata, bufferManager, page, keys, rids, sibling, treeContext);
     }
 
     // Builtins ////////////////////////////////////////////////////////////////

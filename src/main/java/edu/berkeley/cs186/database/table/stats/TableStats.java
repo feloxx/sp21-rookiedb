@@ -18,6 +18,7 @@ import edu.berkeley.cs186.database.table.Table;
  * of pages used by the table, and a histogram on every column of the table.
  * For example, we can construct a TableStats and add/remove records from
  * it like this:
+ * 表的统计信息 里面包含了 Histogram, Bucket
  *
  *   // Create a TableStats object for a table with columns (x: int, y: float).
  *   List<String> fieldNames = Arrays.asList("x", "y");

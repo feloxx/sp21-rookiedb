@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 
 /**
+ * 返回类型的字节位
  * There are five primitive types:
  *
  *   1. 1-byte booleans (Type.boolType()),

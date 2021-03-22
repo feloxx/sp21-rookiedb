@@ -8,6 +8,8 @@ import edu.berkeley.cs186.database.io.PageException;
 /**
  * Represents a page loaded in memory (as opposed to the buffer frame it's in). Wraps
  * around buffer manager frames, and requests the page be loaded into memory as necessary.
+ * 表示在内存中加载的页面(与它所在的缓冲区帧相反)。包装
+ * 在缓冲区管理器框架周围，并请求将页面加载到必要的内存中。
  */
 public class Page {
     // lock context for this page

@@ -4,6 +4,7 @@ import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.databox.TypeId;
 import edu.berkeley.cs186.database.table.Record;
 
+// B+树的元数据
 /** Metadata about a B+ tree. */
 public class BPlusTreeMetadata {
     // Table for which this B+ tree is for
@@ -21,17 +22,23 @@ public class BPlusTreeMetadata {
     // nodes store between d and 2d (key, record id) pairs. Notable exceptions
     // include the root node and leaf nodes that have been deleted from; these
     // may contain fewer than d entries.
+    // 树的阶数。给定阶数为d的树，其内部节点存储d和2d键之间以及d+1和2d+1子指针之间。
+    // 叶结点存储在d和2d（键，记录ID）对之间。
+    // 值得注意的例外包括已从中删除的根节点和叶节点。
+    // 这些可能包含少于d个条目。
     private final int order;
 
     // The partition that the B+ tree allocates pages from. Every node of the B+ tree
     // is stored on a different page on this partition.
+    // B+树分配页的分区。B+树的每个结点
+    // 存储在该分区的不同页上。
     private final int partNum;
 
     // The page number of the root node.
     private long rootPageNum;
 
     // The height of this tree.
-    private int height;
+    private int height; // 树的高度
 
     public BPlusTreeMetadata(String tableName, String colName, Type keySchema, int order, int partNum,
                              long rootPageNum, int height) {

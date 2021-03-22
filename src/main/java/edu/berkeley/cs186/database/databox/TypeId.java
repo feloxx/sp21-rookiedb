@@ -1,5 +1,9 @@
 package edu.berkeley.cs186.database.databox;
 
+/**
+ * 这里相当于是我所有类型的枚举
+ * 在后续的类型操作的时候方便调用
+ */
 public enum TypeId {
     BOOL,
     INT,

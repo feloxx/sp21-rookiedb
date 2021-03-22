@@ -20,6 +20,7 @@ import java.util.Random;
 /**
  * An implementation of a heap file, using a page directory. Assumes data pages are packed (but record
  * lengths do not need to be fixed-length).
+ * 使用页目录的堆文件的实现。假设数据页面被打包(但记录长度不需要固定长度)。
  *
  * Header pages are layed out as follows:
  * - first byte: 0x1 to indicate valid allocated page

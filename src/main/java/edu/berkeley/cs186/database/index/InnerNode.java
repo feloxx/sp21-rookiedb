@@ -19,6 +19,12 @@ import edu.berkeley.cs186.database.table.RecordId;
  * inner node is serialized and persisted on a single page; see toBytes and
  * fromBytes for details on how an inner node is serialized. For example, here
  * is an illustration of an order 2 inner node:
+ * B+树的内部节点。
+ * 阶数为d的B+树中的每个内部结点都存储d和2d的键。
+ * 具有n个键的内部节点存储n+1个指向子结点的"指针"（指针只是一个页码）。
+ * 此外，每个内部节点都被序列化并持久化在单个页上;
+ * 有关如何序列化内部节点的详细信息，请参见toBytes和fromBytes。
+ * 例如，下面是阶数为2内部结点的图示：
  *
  *     +----+----+----+----+
  *     | 10 | 20 | 30 |    |

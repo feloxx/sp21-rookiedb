@@ -18,6 +18,9 @@ import edu.berkeley.cs186.database.table.RecordId;
 
 /**
  * A persistent B+ tree.
+ * 一个带有持久化功能的B+树
+ *
+ * 下面演示了代码流程
  *
  *   BPlusTree tree = new BPlusTree(bufferManager, metadata, lockContext);
  *

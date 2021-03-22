@@ -19,6 +19,11 @@ import java.util.function.BiConsumer;
  * to the page loaded (evicting and loading a new page into the frame will result in
  * a new Frame object, with the same underlying byte array), with old Frame objects
  * backed by the same byte array marked as invalid.
+ * 缓冲区管理器的实现，具有可配置页的淘汰策略。
+ * 数据存储在页大小的字节数组中，并以特定于帧对象的形式返回
+ * 到加载的页面(收回并加载一个新页面到框架将导致
+ * 一个新的Frame对象，具有相同的底层字节数组)，以及旧的Frame对象
+ * 由标记为无效的相同字节数组支持。
  */
 public class BufferManager implements AutoCloseable {
     // We reserve 36 bytes on each page for bookkeeping for recovery
@@ -473,6 +478,7 @@ public class BufferManager implements AutoCloseable {
 
     /**
      * Fetches a new page, with a loaded and pinned buffer frame.
+     * 获取具有加载和固定缓冲区框架的新页面。
      *
      * @param parentContext parent lock context of the new page
      * @param partNum       partition number for new page

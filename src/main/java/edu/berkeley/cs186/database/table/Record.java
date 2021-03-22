@@ -10,6 +10,7 @@ import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.databox.TypeId;
 
+// 一条记录使用一个list来存储databox,因为databox可以实现多种类型,这里我们可以简称元组
 /** A Record is just list of DataBoxes. */
 public class Record {
     private List<DataBox> values;
@@ -41,6 +42,7 @@ public class Record {
 
     /**
      * Serializes this Databox into a byte array based on the passed in schema.
+     * 为了方便以后序列化
      */
     public byte[] toBytes(Schema schema) {
         ByteBuffer byteBuffer = ByteBuffer.allocate(schema.getSizeInBytes());
@@ -54,6 +56,7 @@ public class Record {
      * Returns a new records consisting of this record's values with the other record's
      * values appended to the right of it. i.e. if record a contains [1,2,3] and record b
      * contains [4,5,6], a.concat(b) would be a record consisting of [1,2,3,4,5,6].
+     * 合并多个record, 按照ArrayList.addAll来理解即可
      */
     public Record concat(Record other) {
         List<DataBox> values = new ArrayList<>(this.values);
@@ -64,6 +67,7 @@ public class Record {
     /**
      * Takes a byte[] and decodes it into a Record. This method assumes that the
      * input byte[] represents a record that corresponds to this schema.
+     * 前面有把记录序列化成字节,就有对应把字节序列化回记录
      *
      * @param buf the byte array to decode
      * @param schema the schema used for this record

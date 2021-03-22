@@ -12,8 +12,12 @@ import edu.berkeley.cs186.database.memory.Page;
 import edu.berkeley.cs186.database.table.RecordId;
 
 /**
+ * B+树 节点 抽象类 定义了节点的一些核心API
+ *
+ *
  * An inner node or a leaf node. See InnerNode and LeafNode for more
  * information.
+ * 内节点内节点或叶节点更多信息请参见InnerNode和LeafNode信息。
  */
 abstract class BPlusNode {
     // Core API ////////////////////////////////////////////////////////////////
