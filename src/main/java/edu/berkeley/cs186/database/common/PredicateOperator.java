@@ -6,6 +6,11 @@ package edu.berkeley.cs186.database.common;
  * specificy WHERE table.value >= 186. To express this we would use
  * PredicateOperator.GREATER_THAN_EQUALS. This is useful in QueryPlan.select()
  * when we're trying to add constraints to the WHERE clause of our query.
+ * 谓词操作符表示我们允许的可能比较
+ * 我们的数据库实现。例如，在WHERE从句中，we may
+ * specificy WHERE table.value >= 186。我们可以用
+ * PredicateOperator.GREATER_THAN_EQUALS。这在QueryPlan.select()中很有用。
+ * 当我们试图向查询的WHERE子句添加约束时。
  */
 public enum PredicateOperator {
     EQUALS,

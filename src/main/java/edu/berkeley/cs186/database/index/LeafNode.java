@@ -159,7 +159,12 @@ class LeafNode extends BPlusNode {
     public LeafNode get(DataBox key) {
         // TODO(proj2): implement
 
-        return null;
+        // return null;
+
+        // 根据在BPlusNode这个抽象类的叶子结点的get,只用返回自己
+        // 没看到说要对数据的返回操作,然后又看到这个方法的返回值是 LeafNode
+        // 那应该就是返回自己
+        return getLeftmostLeaf();
     }
 
     // See BPlusNode.getLeftmostLeaf.
@@ -167,7 +172,8 @@ class LeafNode extends BPlusNode {
     public LeafNode getLeftmostLeaf() {
         // TODO(proj2): implement
 
-        return null;
+        // return null;
+        return this;
     }
 
     // See BPlusNode.put.
@@ -175,7 +181,36 @@ class LeafNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
 
-        return Optional.empty();
+        // return Optional.empty();
+
+        // 查找键的位置,然后通过compareTo比较来获得下标
+        int idx = 0;
+        Optional<Pair<DataBox, Long>> out = Optional.empty();
+        for (;
+             idx < keys.size() && key.compareTo(keys.get(idx)) > 0;
+             idx++)
+            ;
+        keys.add(idx, key);
+        rids.add(idx, rid);
+
+        // 要考虑插入时的split情况
+        if (getKeys().size() > 2 * metadata.getOrder()) {
+            int splitIdx = (int) Math.floor(keys.size() / 2.0); // 返回小于等于该值的整数最大值
+            List<DataBox> rkeys = keys.subList(splitIdx, keys.size());
+            List<RecordId> rrids = rids.subList(splitIdx, rids.size());
+            LeafNode snode = new LeafNode(metadata, bufferManager, rkeys, rrids, rightSibling, treeContext);
+
+            // 将分裂后的数据重新赋值
+            keys = keys.subList(0, splitIdx);
+            rids = rids.subList(0, splitIdx);
+            rightSibling = Optional.of(snode.getPage().getPageNum());
+
+            // rkey[0] 应该是这个叶节点中最小的键
+            out = Optional.of(new Pair<>(rkeys.get(0), snode.getPage().getPageNum()));
+        }
+
+        sync();
+        return out;
     }
 
     // See BPlusNode.bulkLoad.
@@ -192,7 +227,11 @@ class LeafNode extends BPlusNode {
     public void remove(DataBox key) {
         // TODO(proj2): implement
 
-        return;
+        // return;
+
+        rids.remove(keys.indexOf(key));
+        keys.remove(key);
+        sync();
     }
 
     // Iterators ///////////////////////////////////////////////////////////////

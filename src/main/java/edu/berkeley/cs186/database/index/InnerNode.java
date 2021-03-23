@@ -2,6 +2,7 @@ package edu.berkeley.cs186.database.index;
 
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.function.Function;
 
 import edu.berkeley.cs186.database.common.Buffer;
 import edu.berkeley.cs186.database.common.Pair;
@@ -48,6 +49,9 @@ class InnerNode extends BPlusNode {
     // LeafNode.keys and LeafNode.rids in LeafNode.java for a warning on the
     // difference between the keys and children here versus the keys and children
     // stored on disk. `keys` is always stored in ascending order.
+    // 这个内部节点的键和子结点指针。
+    // 参见上面的注释LeafNode.keys和LeafNode.rids关于此处的键和子键与存储在磁盘上的键和子键之间的区别的警告。
+    // "键" 总是按升序存储。
     private List<DataBox> keys;
     private List<Long> children;
 
@@ -88,7 +92,30 @@ class InnerNode extends BPlusNode {
     public LeafNode get(DataBox key) {
         // TODO(proj2): implement
 
-        return null;
+        // return null;
+
+        // 没理解
+        // 定义一个函数,去定位结点
+        Function<InnerNode, BPlusNode> helper = (InnerNode node) -> {
+            int idx = 0;
+            DataBox cur = node.keys.get(idx);
+
+            while (key.compareTo(cur) > 0 || key.compareTo(cur) == 0) {
+                if (++idx == node.keys.size()) {
+                    break;
+                }
+                cur = node.keys.get(idx);
+            }
+
+            return node.getChild(idx);
+        };
+
+        // 使用 helper 函数去遍历, 直到达到叶子结点
+        BPlusNode cur = this;
+        while ((cur = helper.apply((InnerNode) cur)).getClass() == InnerNode.class){};
+
+        return (LeafNode) cur;
+
     }
 
     // See BPlusNode.getLeftmostLeaf.
@@ -97,7 +124,16 @@ class InnerNode extends BPlusNode {
         assert(children.size() > 0);
         // TODO(proj2): implement
 
-        return null;
+        // return null;
+
+        // 没理解
+        BPlusNode child = this;
+
+        while (child.getClass() != LeafNode.class) {
+            child = ((InnerNode)child).getChild(0);
+        }
+
+        return (LeafNode) child;
     }
 
     // See BPlusNode.put.
@@ -105,7 +141,59 @@ class InnerNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
 
-        return Optional.empty();
+        // return Optional.empty();
+
+        BPlusNode child = getChild(getNextIdx(key));
+        Optional<Pair<DataBox, Long>> cans = child.put(key, rid);
+        Optional<Pair<DataBox, Long>> out = Optional.empty();
+
+        if (cans.isPresent()) {
+            // 插入的时候要考虑split的问题
+
+            DataBox skey = cans.get().getFirst();
+            int i = 0;
+            for (
+              ;
+              i < keys.size() && skey.compareTo(keys.get(i)) > 0;
+              i ++
+            );
+            keys.add(i, skey);
+            children.add(i + 1, cans.get().getSecond());
+            if (keys.size() > 2 * metadata.getOrder()) {
+                // ... and we're at capacity so we need to split too
+                int kPivot = (int) Math.floor(keys.size() / 2);
+                int cPivot = (int) Math.floor(children.size() / 2);
+                DataBox newParent = keys.get(kPivot);
+
+                List<DataBox> newKeys = keys.subList(kPivot + 1, keys.size());
+                List<Long> newChildren = children.subList(cPivot, children.size());
+
+                // Remove newly split-off keys / children from this node
+                keys = keys.subList(0, kPivot);
+                children = children.subList(0, cPivot);
+
+                InnerNode newNode = new InnerNode(metadata, bufferManager, newKeys, newChildren, treeContext);
+                out = Optional.of(new Pair<>(newParent, newNode.getPage().getPageNum()));
+            }
+
+            sync();
+        }
+        return out;
+    }
+
+    private int getNextIdx(DataBox key) {
+        int idx = 0;
+        DataBox cur = keys.get(idx);
+
+        while (key.compareTo(cur) > 0 || key.compareTo(cur) == 0) {
+            if (++idx == keys.size()) {
+                break;
+            }
+
+            cur = keys.get(idx);
+        }
+
+        return idx;
     }
 
     // See BPlusNode.bulkLoad.
@@ -122,7 +210,9 @@ class InnerNode extends BPlusNode {
     public void remove(DataBox key) {
         // TODO(proj2): implement
 
-        return;
+
+        get(key).remove(key);
+        // return;
     }
 
     // Helpers /////////////////////////////////////////////////////////////////
@@ -131,6 +221,7 @@ class InnerNode extends BPlusNode {
         return page;
     }
 
+    // 根据页码,找叶子结点
     private BPlusNode getChild(int i) {
         long pageNum = children.get(i);
         return BPlusNode.fromBytes(metadata, bufferManager, treeContext, pageNum);

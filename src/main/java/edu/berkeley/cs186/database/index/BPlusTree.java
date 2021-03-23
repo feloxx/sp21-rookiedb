@@ -6,6 +6,7 @@ import java.io.UncheckedIOException;
 import java.util.*;
 
 import edu.berkeley.cs186.database.TransactionContext;
+import edu.berkeley.cs186.database.common.ByteBuffer;
 import edu.berkeley.cs186.database.common.Pair;
 import edu.berkeley.cs186.database.concurrency.LockContext;
 import edu.berkeley.cs186.database.concurrency.LockType;
@@ -71,14 +72,19 @@ public class BPlusTree {
      * Construct a new B+ tree with metadata `metadata` and lock context `lockContext`.
      * `metadata` contains information about the order, partition number,
      * root page number, and type of keys.
+     * B+树的构造方法,使用bufferManager,metadata,lockContext来创建,其中元数据中包含阶数,分区号,页码,和键类型
      *
      * If the specified order is so large that a single node cannot fit on a
      * single page, then a BPlusTree exception is thrown. If you want to have
      * maximally full B+ tree nodes, then use the BPlusTree.maxOrder function
      * to get the appropriate order.
+     * 如果指定的阶数比较大,以至于单个结点无法装入单个页中,会抛出BPlusTree异常。如果你想拥有
+     * 最大限度地满B+树节点，然后使用BPlusTree.maxOrder函数得到合适的阶数。
      *
      * We additionally write a row to the _metadata.indices table with metadata about
      * the B+ tree:
+     * 我们另外向_metadata写入一行。关于元数据的索引表
+     * B +树:
      *
      *   - the name of the tree (table associated with it and column it indexes)
      *   - the key schema of the tree,
@@ -95,6 +101,7 @@ public class BPlusTree {
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.S);
 
         // Sanity checks.
+        // 阶数不能小于0
         if (metadata.getOrder() < 0) {
             String msg = String.format(
                     "You cannot construct a B+ tree with negative order %d.",
@@ -102,6 +109,7 @@ public class BPlusTree {
             throw new BPlusTreeException(msg);
         }
 
+        // 不能大于最大阶数
         int maxOrder = BPlusTree.maxOrder(BufferManager.EFFECTIVE_PAGE_SIZE, metadata.getKeySchema());
         if (metadata.getOrder() > maxOrder) {
             String msg = String.format(
@@ -150,7 +158,11 @@ public class BPlusTree {
 
         // TODO(proj2): implement
 
-        return Optional.empty();
+        // return Optional.empty();
+
+        typecheck(key); // 基础判断,这块在作业和其他地方没有提示,需要仔细阅读源码才能知道
+        return root.get(key) // 根据key去找到结点 因为内部,叶结点都实现了get,这里会递归去找
+          .getKey(key); // 最后找到页结点的时候,再调用getKey返回Optional<RecordId>
     }
 
     /**
@@ -206,7 +218,9 @@ public class BPlusTree {
 
         // TODO(proj2): Return a BPlusTreeIterator.
 
-        return Collections.emptyIterator();
+        // return Collections.emptyIterator();
+
+        return new BPlusTreeIterator();
     }
 
     /**
@@ -239,7 +253,10 @@ public class BPlusTree {
 
         // TODO(proj2): Return a BPlusTreeIterator.
 
-        return Collections.emptyIterator();
+        // return Collections.emptyIterator();
+
+        LeafNode rootLeaf = root.get(key);
+        return new BPlusTreeIterator(rootLeaf, rootLeaf.scanGreaterEqual(key));
     }
 
     /**
@@ -260,8 +277,21 @@ public class BPlusTree {
         // Note: You should NOT update the root variable directly.
         // Use the provided updateRoot() helper method to change
         // the tree's root if the old root splits.
+        // 你不能直接更新根节点, 而是使用 updateRoot() 来辅助修改
 
-        return;
+        Optional<Pair<DataBox, Long>> res = root.put(key, rid);
+
+        if (res.isPresent()) {
+            List<DataBox> keys = new ArrayList<>();
+            keys.add(res.get().getFirst());
+
+            List<Long> children = new ArrayList<>();
+            children.add(root.getPage().getPageNum());
+            children.add(res.get().getSecond());
+
+            root = new InnerNode(metadata, bufferManager, keys, children, lockContext);
+        }
+        // return;
     }
 
     /**
@@ -310,8 +340,8 @@ public class BPlusTree {
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
         // TODO(proj2): implement
-
-        return;
+        // return;
+        root.remove(key);
     }
 
     // Helpers /////////////////////////////////////////////////////////////////
@@ -412,7 +442,11 @@ public class BPlusTree {
             transaction.updateIndexMetadata(metadata);
         }
     }
-
+    private void writeHeader(ByteBuffer buf) {
+        buf.put(metadata.getKeySchema().toBytes());
+        buf.putInt(metadata.getOrder());
+        buf.putLong(root.getPage().getPageNum());
+    }
     private void typecheck(DataBox key) {
         Type t = metadata.getKeySchema();
         if (!key.type().equals(t)) {
@@ -423,20 +457,45 @@ public class BPlusTree {
 
     // Iterator ////////////////////////////////////////////////////////////////
     private class BPlusTreeIterator implements Iterator<RecordId> {
+        private Iterator<RecordId> iter;
+        private LeafNode leaf;
+
         // TODO(proj2): Add whatever fields and constructors you want here.
+        public BPlusTreeIterator() {
+            this(root.getLeftmostLeaf(), null);
+        }
+        public BPlusTreeIterator(LeafNode leaf, Iterator<RecordId> iter) {
+            this.leaf = leaf;
+            this.iter = iter == null ? leaf.scanAll() : iter;
+        }
 
         @Override
         public boolean hasNext() {
             // TODO(proj2): implement
 
-            return false;
+            // return false;
+
+            return iter.hasNext() // 自身迭代器的hasNext
+              || leaf.getRightSibling().isPresent(); // 右兄弟是否存在
         }
 
         @Override
         public RecordId next() {
             // TODO(proj2): implement
 
-            throw new NoSuchElementException();
+            // throw new NoSuchElementException();
+
+            // 如果自身有,就直接next即可
+            if (iter.hasNext()) {
+                return iter.next();
+            }
+            // 如果自身没有了,看看兄弟结点有不有
+            // 如果 getRightSibling 返回已经是个empty了,再get会触发NoSuchElement异常呀? 这块没明白
+            else {
+                leaf = leaf.getRightSibling().get();
+                iter = leaf.scanAll();
+                return next();
+            }
         }
     }
 }

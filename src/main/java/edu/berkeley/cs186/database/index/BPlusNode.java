@@ -26,6 +26,9 @@ abstract class BPlusNode {
      * For example, consider the following B+ tree (for brevity, only keys are
      * shown; record ids are omitted).
      *
+     * n.get(k)从n查询时返回k所在的叶节点。
+     * 例如，考虑下面的B+树(为了简洁起见，只显示键，忽略记录id)。
+     *
      *                               inner
      *                               +----+----+----+----+
      *                               | 10 | 20 |    |    |
@@ -38,14 +41,15 @@ abstract class BPlusNode {
      *   +----+----+----+----+  +----+----+----+----+  +----+----+----+----+
      *   leaf0                  leaf1                  leaf2
      *
-     * inner.get(x) should return
+     * inner.get(x) should return 内部结点执行get时应该有以下的几种返回
      *
-     *   - leaf0 when x < 10,
+     *   - leaf0 when x < 10, 叶结点0应该返回 x < 10 的键,下面的以此类推
      *   - leaf1 when 10 <= x < 20, and
      *   - leaf2 when x >= 20.
      *
      * Note that inner.get(4) would return leaf0 even though leaf0 doesn't
      * actually contain 4.
+     * 注意，inner.get(4)将返回leaf0，即使leaf0实际上并不包含4。
      */
     public abstract LeafNode get(DataBox key);
 
@@ -53,6 +57,10 @@ abstract class BPlusNode {
      * n.getLeftmostLeaf() returns the leftmost leaf in the subtree rooted by n.
      * In the example above, inner.getLeftmostLeaf() would return leaf0, and
      * leaf1.getLeftmostLeaf() would return leaf1.
+     * getleftmostleaf() 返回以n为根的子树中最左边的叶子。
+     * 在上面的示例中
+     * inner.getLeftmostLeaf()将返回leaf0
+     * leaf1.getLeftmostLeaf()将返回leaf1。
      */
     public abstract LeafNode getLeftmostLeaf();
 
@@ -172,6 +180,11 @@ abstract class BPlusNode {
      * REMOVE SHOULD NOT REBALANCE THE TREE. Simply delete the key and
      * corresponding record id. For example, running inner.remove(2) on the
      * example tree above would produce the following tree.
+     * 移除键k和它对应的记录id
+     * 以n为根的子树，如果键k不在子树中，则不执行任何操作。
+     * 移除不应该重新平衡树。只需删除密钥和
+     * 对应的记录id。例如，在
+     * 上面的示例树将生成下面的树。
      *
      *                               inner
      *                               +----+----+----+----+
