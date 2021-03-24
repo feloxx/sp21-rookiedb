@@ -90,31 +90,22 @@ public class TestBPlusTree {
                     ") - are you materializing more than you need?",
                     newIOs - prevIOs > maxIOs);
 
-        System.out.println("start xs add");
         List<T> xs = new ArrayList<>();
-        int i = 1;
         while (iter.hasNext()) {
-            // prevIOs = bufferManager.getNumIOs();
-            if (i == 10) {
-                xs.add(iter.next());
-                break;
-            }
+            prevIOs = bufferManager.getNumIOs();
+
             xs.add(iter.next());
-            // newIOs = bufferManager.getNumIOs();
-            // maxIOs = maxIOsOverride.hasNext() ? maxIOsOverride.next() : MAX_IO_PER_NEXT;
-            // assertFalse("too many I/Os used per next() call (" + (newIOs - prevIOs) + " > " + maxIOs +
-            //             ") - are you materializing more than you need?",
-            //             newIOs - prevIOs > maxIOs);
-            i++;
+            newIOs = bufferManager.getNumIOs();
+            maxIOs = maxIOsOverride.hasNext() ? maxIOsOverride.next() : MAX_IO_PER_NEXT;
+            assertFalse("too many I/Os used per next() call (" + (newIOs - prevIOs) + " > " + maxIOs +
+                        ") - are you materializing more than you need?",
+                        newIOs - prevIOs > maxIOs);
         }
-        System.out.println(xs);
-        System.out.println(xs.size());
-        System.out.println("calc io");
-        // long finalIOs = bufferManager.getNumIOs();
-        // maxIOs = xs.size() / (2 * metadata.getOrder());
-        // assertTrue("too few I/Os used overall (" + (finalIOs - initialIOs) + " < " + maxIOs +
-        //            ") - are you materializing before the iterator is even constructed?",
-        //            (finalIOs - initialIOs) >= maxIOs);
+        long finalIOs = bufferManager.getNumIOs();
+        maxIOs = xs.size() / (2 * metadata.getOrder());
+        assertTrue("too few I/Os used overall (" + (finalIOs - initialIOs) + " < " + maxIOs +
+                   ") - are you materializing before the iterator is even constructed?",
+                   (finalIOs - initialIOs) >= maxIOs);
         return xs;
     }
 
@@ -430,14 +421,12 @@ public class TestBPlusTree {
         List<DataBox> keys = new ArrayList<>();
         List<RecordId> rids = new ArrayList<>();
         List<RecordId> sortedRids = new ArrayList<>();
-        System.out.println("start stage 1");
-        for (int i = 0; i < 10; ++i) {
+        for (int i = 0; i < 1000; ++i) {
             keys.add(new IntDataBox(i));
             rids.add(new RecordId(i, (short) i));
             sortedRids.add(new RecordId(i, (short) i));
         }
 
-        System.out.println("start stage 2");
         // Try trees with different orders.
         // 尝试不同阶数的树
         for (int d = 2; d < 5; ++d) {
@@ -447,24 +436,20 @@ public class TestBPlusTree {
                 Collections.shuffle(rids, new Random(42));
 
                 // Insert all the keys.
-                System.out.println("start test insert all the keys");
                 BPlusTree tree = getBPlusTree(Type.intType(), d);
                 for (int i = 0; i < keys.size(); ++i) {
                     tree.put(keys.get(i), rids.get(i));
                 }
 
                 // Test get.
-                System.out.println("test get");
                 for (int i = 0; i < keys.size(); ++i) {
                     assertEquals(Optional.of(rids.get(i)), tree.get(keys.get(i)));
                 }
 
                 // Test scanAll.
-                System.out.println("test scanAll");
-                // assertEquals(sortedRids, indexIteratorToList(tree::scanAll));
+                assertEquals(sortedRids, indexIteratorToList(tree::scanAll));
 
                 // Test scanGreaterEqual.
-                System.out.println("test scanGreaterEqual");
                 for (int i = 0; i < keys.size(); i += 100) {
                     final int j = i;
                     List<RecordId> expected = sortedRids.subList(i, sortedRids.size());
@@ -476,7 +461,6 @@ public class TestBPlusTree {
                 assertEquals(sortedRids, indexIteratorToList(fromDisk::scanAll));
 
                 // Test remove.
-                System.out.println("test remove");
                 Collections.shuffle(keys, new Random(42));
                 Collections.shuffle(rids, new Random(42));
                 for (DataBox key : keys) {

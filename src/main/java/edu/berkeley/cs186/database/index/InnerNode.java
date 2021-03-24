@@ -94,27 +94,33 @@ class InnerNode extends BPlusNode {
 
         // return null;
 
+        // 第一种解法
         // 没理解
         // 定义一个函数,去定位结点
-        Function<InnerNode, BPlusNode> helper = (InnerNode node) -> {
-            int idx = 0;
-            DataBox cur = node.keys.get(idx);
+        // Function<InnerNode, BPlusNode> helper = (InnerNode node) -> {
+        //     int idx = 0;
+        //     DataBox cur = node.keys.get(idx);
+        //
+        //     while (key.compareTo(cur) > 0 || key.compareTo(cur) == 0) {
+        //         if (++idx == node.keys.size()) {
+        //             break;
+        //         }
+        //         cur = node.keys.get(idx);
+        //     }
+        //
+        //     return node.getChild(idx);
+        // };
+        //
+        // // 使用 helper 函数去遍历, 直到达到叶子结点
+        // BPlusNode cur = this;
+        // while ((cur = helper.apply((InnerNode) cur)).getClass() == InnerNode.class){};
+        //
+        // return (LeafNode) cur;
 
-            while (key.compareTo(cur) > 0 || key.compareTo(cur) == 0) {
-                if (++idx == node.keys.size()) {
-                    break;
-                }
-                cur = node.keys.get(idx);
-            }
-
-            return node.getChild(idx);
-        };
-
-        // 使用 helper 函数去遍历, 直到达到叶子结点
-        BPlusNode cur = this;
-        while ((cur = helper.apply((InnerNode) cur)).getClass() == InnerNode.class){};
-
-        return (LeafNode) cur;
+        // 第二种解法
+        int index = numLessThanEqual(key, keys);
+        BPlusNode child = getChild(index);
+        return child.get(key);
 
     }
 
@@ -286,6 +292,8 @@ class InnerNode extends BPlusNode {
      * Given a list ys sorted in ascending order, numLessThanEqual(x, ys) returns
      * the number of elements in ys that are less than or equal to x. For
      * example,
+     * 给定一个按升序排序的列表，numLessThanEqual(x, ys)返回
+     * y中小于或等于x的元素个数
      *
      *   numLessThanEqual(0, Arrays.asList(1, 2, 3, 4, 5)) == 0
      *   numLessThanEqual(1, Arrays.asList(1, 2, 3, 4, 5)) == 1

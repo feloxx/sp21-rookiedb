@@ -229,9 +229,11 @@ class LeafNode extends BPlusNode {
 
         // return;
 
-        rids.remove(keys.indexOf(key));
-        keys.remove(key);
-        sync();
+        if (keys.contains(key)) {
+            rids.remove(keys.indexOf(key));
+            keys.remove(key);
+            sync();
+        }
     }
 
     // Iterators ///////////////////////////////////////////////////////////////
@@ -267,7 +269,9 @@ class LeafNode extends BPlusNode {
 
     /** Returns the right sibling of this leaf, if it has one. */
     Optional<LeafNode> getRightSibling() {
-        if (!rightSibling.isPresent()) {
+        // 前面在序列化的时候,为右兄弟不存在的情况添加了-1进行表示,所以这里我们需要对这个-1进行判断
+        if (!rightSibling.isPresent()
+          || rightSibling.get() <= 0) {
             return Optional.empty();
         }
 
@@ -408,7 +412,7 @@ class LeafNode extends BPlusNode {
 
         ByteBuffer buf = ByteBuffer.allocate(size);
         buf.put((byte) 1);
-        buf.putLong(rightSibling.orElse(-1L));
+        buf.putLong(rightSibling.orElse(-1L)); //这个地方需要注意,如果右兄弟不存在,则为-1,后面处理逻辑的时候需要考虑这个-1
         buf.putInt(keys.size());
         for (int i = 0; i < keys.size(); ++i) {
             buf.put(keys.get(i).toBytes());
