@@ -164,7 +164,7 @@ class LeafNode extends BPlusNode {
         // 根据在BPlusNode这个抽象类的叶子结点的get,只用返回自己
         // 没看到说要对数据的返回操作,然后又看到这个方法的返回值是 LeafNode
         // 那应该就是返回自己
-        return getLeftmostLeaf();
+        return this; // 叶子结点只需要返回自己即可
     }
 
     // See BPlusNode.getLeftmostLeaf.
@@ -183,34 +183,68 @@ class LeafNode extends BPlusNode {
 
         // return Optional.empty();
 
-        // 查找键的位置,然后通过compareTo比较来获得下标
-        int idx = 0;
-        Optional<Pair<DataBox, Long>> out = Optional.empty();
-        for (;
-             idx < keys.size() && key.compareTo(keys.get(idx)) > 0;
-             idx++)
-            ;
-        keys.add(idx, key);
-        rids.add(idx, rid);
+        // 不支持重复的键
+        if (keys.contains(key)) {
+            throw new BPlusTreeException(String.format("Duplicate key %s inserted.", key));
+        }
+        // 第一种实现
+        // int idx = 0;
+        // Optional<Pair<DataBox, Long>> out = Optional.empty();
+        // for (;
+        //      idx < keys.size() && key.compareTo(keys.get(idx)) > 0;
+        //      idx++)
+        //     ;
+        // keys.add(idx, key);
+        // rids.add(idx, rid);
+        // // 要考虑插入时的split情况
+        // if (getKeys().size() > 2 * metadata.getOrder()) {
+        //     int splitIdx = (int) Math.floor(keys.size() / 2.0); // 返回小于等于该值的整数最大值
+        //     List<DataBox> rkeys = keys.subList(splitIdx, keys.size());
+        //     List<RecordId> rrids = rids.subList(splitIdx, rids.size());
+        //     LeafNode snode = new LeafNode(metadata, bufferManager, rkeys, rrids, rightSibling, treeContext);
+        //
+        //     // 将分裂后的数据重新赋值
+        //     keys = keys.subList(0, splitIdx);
+        //     rids = rids.subList(0, splitIdx);
+        //     rightSibling = Optional.of(snode.getPage().getPageNum());
+        //
+        //     // rkey[0] 应该是这个叶节点中最小的键
+        //     out = Optional.of(new Pair<>(rkeys.get(0), snode.getPage().getPageNum()));
+        // }
+        // sync();
+        // return out;
 
-        // 要考虑插入时的split情况
-        if (getKeys().size() > 2 * metadata.getOrder()) {
-            int splitIdx = (int) Math.floor(keys.size() / 2.0); // 返回小于等于该值的整数最大值
-            List<DataBox> rkeys = keys.subList(splitIdx, keys.size());
-            List<RecordId> rrids = rids.subList(splitIdx, rids.size());
-            LeafNode snode = new LeafNode(metadata, bufferManager, rkeys, rrids, rightSibling, treeContext);
+        // 第二种实现
+        int index = InnerNode.numLessThanEqual(key, keys);
+        keys.add(index, key);
+        rids.add(index, rid);
 
-            // 将分裂后的数据重新赋值
-            keys = keys.subList(0, splitIdx);
-            rids = rids.subList(0, splitIdx);
-            rightSibling = Optional.of(snode.getPage().getPageNum());
-
-            // rkey[0] 应该是这个叶节点中最小的键
-            out = Optional.of(new Pair<>(rkeys.get(0), snode.getPage().getPageNum()));
+        // 获得阶数,溢出判断
+        int d = metadata.getOrder();
+        if (keys.size() <= 2 * d) {
+            sync();
+            return Optional.empty();
         }
 
+        // 如果结点溢出则进行下面的分裂操作
+        assert(keys.size() == 2*d + 1);
+        List<DataBox> leftKeys = keys.subList(0, d);
+        List<DataBox> rightKeys = keys.subList(d, 2 * d + 1);
+        List<RecordId> leftRids = rids.subList(0, d);
+        List<RecordId> rightRids = rids.subList(d, 2 * d + 1);
+
+        // 创建叶子结点的右结点
+        LeafNode n = new LeafNode(metadata, bufferManager, rightKeys, rightRids, rightSibling, treeContext);
+        long pageNum = n.getPage().getPageNum();
+
+        // 更新左结点
+        this.keys = leftKeys;
+        this.rids = leftRids;
+        this.rightSibling = Optional.of(pageNum);
         sync();
-        return out;
+
+        // 返回右结点
+        return Optional.of(new Pair<>(rightKeys.get(0), pageNum));
     }
 
     // See BPlusNode.bulkLoad.
@@ -219,7 +253,42 @@ class LeafNode extends BPlusNode {
             float fillFactor) {
         // TODO(proj2): implement
 
-        return Optional.empty();
+        // return Optional.empty();
+
+        // 强调阶数
+        int d = metadata.getOrder();
+        if (fillFactor * 2 * d <= 0) {
+            throw new BPlusTreeException("Cannot bulk-load to empty leaves.");
+        }
+
+        // 按照负载因子的容量限制来进行赋值
+        int numKeys = (int) Math.ceil(2 * d * fillFactor);
+        for (int i = keys.size(); i < numKeys && data.hasNext(); ++i) {
+            Pair<DataBox, RecordId> pair = data.next();
+            keys.add(pair.getFirst());
+            rids.add(pair.getSecond());
+        }
+
+        if (!data.hasNext()) {
+            sync();
+            return Optional.empty();
+        }
+
+        List<DataBox> rightKeys = new ArrayList<>();
+        List<RecordId> rightRids = new ArrayList<>();
+        Pair<DataBox, RecordId> pair = data.next();
+        rightKeys.add(0, pair.getFirst());
+        rightRids.add(0, pair.getSecond());
+
+        // Create right node.
+        LeafNode n = new LeafNode(metadata, bufferManager, rightKeys, rightRids, rightSibling, treeContext);
+        long pageNum = n.getPage().getPageNum();
+
+        // Update left node.
+        this.rightSibling = Optional.of(pageNum);
+        sync();
+
+        return Optional.of(new Pair<>(rightKeys.get(0), pageNum));
     }
 
     // See BPlusNode.remove.
@@ -246,6 +315,7 @@ class LeafNode extends BPlusNode {
     /**
      * Returns an iterator over the record ids of this leaf in ascending order of
      * their corresponding keys.
+     * 返回一个迭代器，遍历这个叶子的记录id，按其对应键的升序排列。
      */
     Iterator<RecordId> scanAll() {
         return rids.iterator();
@@ -434,7 +504,7 @@ class LeafNode extends BPlusNode {
         // 要实现fromBytes，请使用 能够重用现有页的 而不是 获取全新页的 构造函数。
 
         // 我的思路
-        // 先拿到当先叶子节点的页,然后将页里面的数据拿出来
+        // 先拿到当先叶子结点的页,然后将页里面的数据拿出来
         // 与页交互操作,就是操作页里的ByteBuffer
         // 然后从ByteBuffer里拿出 sibling keys rid entry等信息
         // 最后需要注意上面的 Note 关键信息是需要使用构造方法来重现页,而不是去构造一个全新的

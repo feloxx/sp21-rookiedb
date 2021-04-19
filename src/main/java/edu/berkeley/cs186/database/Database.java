@@ -1102,8 +1102,8 @@ public class Database implements AutoCloseable {
 
                 int order = BPlusTree.maxOrder(BufferManager.EFFECTIVE_PAGE_SIZE, colType);
                 Record indexEntry = new Record(tableName, columnName, order,
-                        diskSpaceManager.allocPart(),
-                        diskSpaceManager.INVALID_PAGE_NUM,
+                        diskSpaceManager.allocPart(), // 分区号 调用磁盘空间管理器中,以线程安全AtomicInteger的增量累加的方式获得分区号
+                        diskSpaceManager.INVALID_PAGE_NUM, // 页码 初始为-1吗?
                         colType.getTypeId().ordinal(),
                         colType.getSizeInBytes(), -1
                 );

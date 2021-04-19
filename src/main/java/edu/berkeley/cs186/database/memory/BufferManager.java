@@ -478,10 +478,10 @@ public class BufferManager implements AutoCloseable {
 
     /**
      * Fetches a new page, with a loaded and pinned buffer frame.
-     * 获取具有加载和固定缓冲区框架的新页面。
+     * 获取具有加载和固定缓冲区框架的新页。
      *
-     * @param parentContext parent lock context of the new page
-     * @param partNum       partition number for new page
+     * @param parentContext parent lock context of the new page 需要上下文的父锁
+     * @param partNum       partition number for new page 需要一个新的分区号
      * @return the new page
      */
     public Page fetchNewPage(LockContext parentContext, int partNum) {

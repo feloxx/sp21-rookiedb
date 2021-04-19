@@ -118,10 +118,10 @@ class InnerNode extends BPlusNode {
         // return (LeafNode) cur;
 
         // 第二种解法
-        int index = numLessThanEqual(key, keys);
-        BPlusNode child = getChild(index);
-        return child.get(key);
 
+        int index = numLessThanEqual(key, keys); // 因为B+树在查找时,索引到中间结点时会按个去查找匹配,如果我们在查找前先过滤掉比我们大的结点,这样可以减少一些查找成本
+        BPlusNode child = getChild(index); // 调用内部结点 根据页码找下一结点的方法
+        return child.get(key); // 内部节点则返回 child get 去自动找到叶子结点
     }
 
     // See BPlusNode.getLeftmostLeaf.
@@ -132,11 +132,11 @@ class InnerNode extends BPlusNode {
 
         // return null;
 
-        // 没理解
-        BPlusNode child = this;
+        BPlusNode child = this; // 修改类型,定义起点
 
+        // 循序类型匹配,只找内部结点
         while (child.getClass() != LeafNode.class) {
-            child = ((InnerNode)child).getChild(0);
+            child = ((InnerNode)child).getChild(0); // 因为内部节点的存储方式都是用List,所以这里每次循环都是取最左边的结点来查找,靠循环递归下去
         }
 
         return (LeafNode) child;
@@ -149,57 +149,83 @@ class InnerNode extends BPlusNode {
 
         // return Optional.empty();
 
-        BPlusNode child = getChild(getNextIdx(key));
-        Optional<Pair<DataBox, Long>> cans = child.put(key, rid);
-        Optional<Pair<DataBox, Long>> out = Optional.empty();
+        // 第一种实现
+        // BPlusNode child = getChild(numLessThanEqual(key, keys));
+        // Optional<Pair<DataBox, Long>> cans = child.put(key, rid);
+        // Optional<Pair<DataBox, Long>> out = Optional.empty();
+        //
+        // if (cans.isPresent()) {
+        //     // 插入的时候要考虑split的问题
+        //     DataBox skey = cans.get().getFirst();
+        //     int i = 0;
+        //     for (
+        //       ;
+        //       i < keys.size() && skey.compareTo(keys.get(i)) > 0;
+        //       i ++
+        //     );
+        //     keys.add(i, skey);
+        //     children.add(i + 1, cans.get().getSecond());
+        //     if (keys.size() > 2 * metadata.getOrder()) {
+        //         // ... and we're at capacity so we need to split too
+        //         int kPivot = (int) Math.floor(keys.size() / 2);
+        //         int cPivot = (int) Math.floor(children.size() / 2);
+        //         DataBox newParent = keys.get(kPivot);
+        //
+        //         List<DataBox> newKeys = keys.subList(kPivot + 1, keys.size());
+        //         List<Long> newChildren = children.subList(cPivot, children.size());
+        //
+        //         // Remove newly split-off keys / children from this node
+        //         keys = keys.subList(0, kPivot);
+        //         children = children.subList(0, cPivot);
+        //
+        //         InnerNode newNode = new InnerNode(metadata, bufferManager, newKeys, newChildren, treeContext);
+        //         out = Optional.of(new Pair<>(newParent, newNode.getPage().getPageNum()));
+        //     }
+        //
+        //     sync();
+        // }
+        // return out;
 
-        if (cans.isPresent()) {
-            // 插入的时候要考虑split的问题
+        // 第二种实现
+        int index = numLessThanEqual(key, keys);
+        BPlusNode child = getChild(index);
+        Optional<Pair<DataBox, Long>> o = child.put(key, rid);
 
-            DataBox skey = cans.get().getFirst();
-            int i = 0;
-            for (
-              ;
-              i < keys.size() && skey.compareTo(keys.get(i)) > 0;
-              i ++
-            );
-            keys.add(i, skey);
-            children.add(i + 1, cans.get().getSecond());
-            if (keys.size() > 2 * metadata.getOrder()) {
-                // ... and we're at capacity so we need to split too
-                int kPivot = (int) Math.floor(keys.size() / 2);
-                int cPivot = (int) Math.floor(children.size() / 2);
-                DataBox newParent = keys.get(kPivot);
+        // 如果不需要分裂就直接跳出递归
+        if (!o.isPresent()) {
+            return Optional.empty();
+        }
 
-                List<DataBox> newKeys = keys.subList(kPivot + 1, keys.size());
-                List<Long> newChildren = children.subList(cPivot, children.size());
+        // 下面开始分裂的逻辑
+        Pair<DataBox, Long> p = o.get();
+        keys.add(index, p.getFirst());
+        children.add(index + 1, p.getSecond());
 
-                // Remove newly split-off keys / children from this node
-                keys = keys.subList(0, kPivot);
-                children = children.subList(0, cPivot);
-
-                InnerNode newNode = new InnerNode(metadata, bufferManager, newKeys, newChildren, treeContext);
-                out = Optional.of(new Pair<>(newParent, newNode.getPage().getPageNum()));
-            }
-
+        // 获得阶数,溢出判断
+        int d = metadata.getOrder();
+        if (keys.size() <= 2 * d) {
             sync();
-        }
-        return out;
-    }
-
-    private int getNextIdx(DataBox key) {
-        int idx = 0;
-        DataBox cur = keys.get(idx);
-
-        while (key.compareTo(cur) > 0 || key.compareTo(cur) == 0) {
-            if (++idx == keys.size()) {
-                break;
-            }
-
-            cur = keys.get(idx);
+            return Optional.empty();
         }
 
-        return idx;
+        // 如果结点溢出则进行下面的分裂操作
+        assert(keys.size() == 2*d + 1);
+        List<DataBox> leftKeys = keys.subList(0, d);
+        DataBox middleKey = keys.get(d);
+        List<DataBox> rightKeys = keys.subList(d + 1, 2*d + 1);
+        List<Long> leftChildren = children.subList(0, d + 1);
+        List<Long> rightChildren = children.subList(d + 1, 2*d + 2);
+
+        // 创建内部结点的右结点
+        InnerNode n = new InnerNode(metadata, bufferManager, rightKeys, rightChildren, treeContext);
+
+        // 更新左结点
+        this.keys = leftKeys;
+        this.children = leftChildren;
+        sync();
+
+        // 返回右结点
+        return Optional.of(new Pair<>(middleKey, n.getPage().getPageNum()));
     }
 
     // See BPlusNode.bulkLoad.
@@ -208,7 +234,40 @@ class InnerNode extends BPlusNode {
             float fillFactor) {
         // TODO(proj2): implement
 
-        return Optional.empty();
+        // return Optional.empty();
+
+        // 强调阶数
+        int d = metadata.getOrder();
+        while (data.hasNext() && keys.size() <= 2 * d) {
+            BPlusNode rightChild = getChild(children.size() - 1);
+            Optional<Pair<DataBox, Long>> o = rightChild.bulkLoad(data, fillFactor);
+            if (o.isPresent()) {
+                Pair<DataBox, Long> p = o.get();
+                keys.add(keys.size(), p.getFirst());
+                children.add(children.size(), p.getSecond());
+            }
+        }
+
+        if (keys.size() <= 2*d) {
+            sync();
+            return Optional.empty();
+        }
+
+        assert(keys.size() == 2*d + 1);
+        List<DataBox> leftKeys = keys.subList(0, d);
+        DataBox middleKey = keys.get(d);
+        List<DataBox> rightKeys = keys.subList(d + 1, 2*d + 1);
+        List<Long> leftChildren = children.subList(0, d + 1);
+        List<Long> rightChildren = children.subList(d + 1, 2*d + 2);
+
+        // Create right node.
+        InnerNode n = new InnerNode(metadata, bufferManager, rightKeys, rightChildren, treeContext);
+        // Update left node.
+        this.keys = leftKeys;
+        this.children = leftChildren;
+        sync();
+
+        return Optional.of(new Pair<>(middleKey, n.getPage().getPageNum()));
     }
 
     // See BPlusNode.remove.
@@ -293,7 +352,7 @@ class InnerNode extends BPlusNode {
      * the number of elements in ys that are less than or equal to x. For
      * example,
      * 给定一个按升序排序的列表，numLessThanEqual(x, ys)返回
-     * y中小于或等于x的元素个数
+     * yx中小于或等于x的元素个数
      *
      *   numLessThanEqual(0, Arrays.asList(1, 2, 3, 4, 5)) == 0
      *   numLessThanEqual(1, Arrays.asList(1, 2, 3, 4, 5)) == 1

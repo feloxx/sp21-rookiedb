@@ -5,7 +5,9 @@ import java.io.FileWriter;
 import java.io.UncheckedIOException;
 import java.util.*;
 
+import edu.berkeley.cs186.database.DatabaseException;
 import edu.berkeley.cs186.database.TransactionContext;
+import edu.berkeley.cs186.database.common.Buffer;
 import edu.berkeley.cs186.database.common.ByteBuffer;
 import edu.berkeley.cs186.database.common.Pair;
 import edu.berkeley.cs186.database.concurrency.LockContext;
@@ -15,6 +17,7 @@ import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.io.DiskSpaceManager;
 import edu.berkeley.cs186.database.memory.BufferManager;
+import edu.berkeley.cs186.database.memory.Page;
 import edu.berkeley.cs186.database.table.RecordId;
 
 /**
@@ -68,6 +71,7 @@ public class BPlusTree {
     private LockContext lockContext;
 
     // Constructors ////////////////////////////////////////////////////////////
+    // 构造方法
     /**
      * Construct a new B+ tree with metadata `metadata` and lock context `lockContext`.
      * `metadata` contains information about the order, partition number,
@@ -139,6 +143,7 @@ public class BPlusTree {
     }
 
     // Core API ////////////////////////////////////////////////////////////////
+    // B+树核心api
     /**
      * Returns the value associated with `key`.
      *
@@ -160,9 +165,8 @@ public class BPlusTree {
 
         // return Optional.empty();
 
-        typecheck(key); // 基础判断,这块在作业和其他地方没有提示,需要仔细阅读源码才能知道
-        return root.get(key) // 根据key去找到结点 因为内部,叶结点都实现了get,这里会递归去找
-          .getKey(key); // 最后找到页结点的时候,再调用getKey返回Optional<RecordId>
+        return root.get(key) // 根据key去找到结点因为内部结点,叶结点都实现了get,这里会递归去找
+          .getKey(key); // 最后找到叶子结点的时候,再调用getKey返回Optional<RecordId>
     }
 
     /**
@@ -279,37 +283,63 @@ public class BPlusTree {
         // the tree's root if the old root splits.
         // 你不能直接更新根节点, 而是使用 updateRoot() 来辅助修改
 
-        Optional<Pair<DataBox, Long>> res = root.put(key, rid);
+        // 第一种实现
+        // Optional<Pair<DataBox, Long>> res = root.put(key, rid);
+        // if (res.isPresent()) {
+        //     List<DataBox> keys = new ArrayList<>();
+        //     keys.add(res.get().getFirst());
+        //
+        //     List<Long> children = new ArrayList<>();
+        //     children.add(root.getPage().getPageNum());
+        //     children.add(res.get().getSecond());
+        //
+        //     updateRoot(new InnerNode(metadata, bufferManager, keys, children, lockContext));
+        // }
 
-        if (res.isPresent()) {
-            List<DataBox> keys = new ArrayList<>();
-            keys.add(res.get().getFirst());
+        // 第二种实现
+        Optional<Pair<DataBox, Long>> o = root.put(key, rid);
 
-            List<Long> children = new ArrayList<>();
-            children.add(root.getPage().getPageNum());
-            children.add(res.get().getSecond());
-
-            root = new InnerNode(metadata, bufferManager, keys, children, lockContext);
+        // 如果不需要分裂就直接返回
+        if (!o.isPresent()) {
+            return;
         }
-        // return;
+
+        // 下面的分裂逻辑
+        Pair<DataBox, Long> p = o.get();
+        List<DataBox> keys = new ArrayList<>();
+        keys.add(p.getFirst());
+
+        List<Long> children = new ArrayList<>();
+        children.add(root.getPage().getPageNum());
+        children.add(p.getSecond());
+
+        updateRoot(new InnerNode(metadata, bufferManager, keys, children, lockContext));
     }
 
     /**
      * Bulk loads data into the B+ tree. Tree should be empty and the data
      * iterator should be in sorted order (by the DataBox key field) and
      * contain no duplicates (no error checking is done for this).
+     * 批量加载数据到B+树。
+     * 树应该是空的，数据迭代器应该按照排序顺序(根据DataBox键字段)，
+     * 并且不包含重复项(对此不进行错误检查)。
      *
      * fillFactor specifies the fill factor for leaves only; inner nodes should
      * be filled up to full and split in half exactly like in put.
+     * fillFactor仅为叶子指定填充因子;内节点应该完全填满，并像put一样分成两半。
      *
      * This method should raise an exception if the tree is not empty at time
      * of bulk loading. If data does not meet the preconditions (contains
      * duplicates or not in order), the resulting behavior is undefined.
      * Undefined behavior means you can handle these cases however you want
      * (or not at all) and you are not required to write any explicit checks.
+     * 如果在批量加载时树不是空的，则此方法将引发异常。
+     * 如果数据不满足先决条件(包含重复或不按顺序)，则结果行为是未定义的。
+     * 未定义的行为意味着您可以按照您想要的方式处理这些情况(或者根本不处理)，并且您不需要编写任何显式的检查。
      *
      * The behavior of this method should be similar to that of InnerNode's
      * bulkLoad (see comments in BPlusNode.bulkLoad).
+     * 这个方法的行为应该类似于InnerNode的bulkLoad(参见BPlusNode.bulkLoad中的注释)。
      */
     public void bulkLoad(Iterator<Pair<DataBox, RecordId>> data, float fillFactor) {
         // TODO(proj4_integration): Update the following line
@@ -320,7 +350,33 @@ public class BPlusTree {
         // Use the provided updateRoot() helper method to change
         // the tree's root if the old root splits.
 
-        return;
+        // return;
+
+        // 获得叶子结点来判断是否为空树
+        LeafNode left = this.root.getLeftmostLeaf();
+        if (left != this.root // 叶子不等于根 证明有数据
+          || left.scanAll().hasNext()) { // 叶子下的迭代器能后进行hasNext 证明有数据
+            throw new BPlusTreeException("cannot bulk load into nonempty tree");
+        }
+        // 传进来是一个Iterator,在前面没有想到要在开始的时候去迭代它
+        while (data.hasNext()) {
+            // 递归往下走
+            Optional<Pair<DataBox, Long>> res = this.root.bulkLoad(data, fillFactor);
+            if (res.isPresent()) {
+                Pair<DataBox, Long> p = res.get();
+
+                // 组装 root 节点的 keys和children
+                List<DataBox> keys = new ArrayList<>();
+                keys.add(p.getFirst());
+
+                List<Long> children = new ArrayList<>();
+                children.add(root.getPage().getPageNum());
+                children.add(p.getSecond());
+
+                // 使用官方推荐的updateRoot来更新结点,不要用直接赋值的方式
+                updateRoot(new InnerNode(metadata, bufferManager, keys, children, lockContext));
+            }
+        }
     }
 
     /**
@@ -345,6 +401,7 @@ public class BPlusTree {
     }
 
     // Helpers /////////////////////////////////////////////////////////////////
+    // 对内对外使用的辅助方法
     /**
      * Returns a sexp representation of this tree. See BPlusNode.toSexp for
      * more information.
@@ -366,6 +423,9 @@ public class BPlusTree {
      *   dot -T pdf tree.dot -o tree.pdf
      *
      * to create a PDF of the tree.
+     *
+     * 该方法主要用于调试
+     * 辅助生成树的pdf文件
      */
     public String toDot() {
         // TODO(proj4_integration): Update the following line
@@ -384,6 +444,10 @@ public class BPlusTree {
      * the dot representation of the B+ tree to a dot file and then
      * convert that to a PDF that will be stored in the src directory. Pass in a
      * string with the ".pdf" extension included at the end (ex "tree.pdf").
+     *
+     * 这个函数与toDot()非常相似，只是我们将B+树的点表示写为点文件，然后将其转换为将存储在src目录中的PDF。
+     *
+     * 传入一个后缀为".pdf"的字符串(例如"tree.pdf")。
      */
     public void toDotPDFFile(String filename) {
         String tree_string = toDot();
@@ -417,6 +481,7 @@ public class BPlusTree {
     /**
      * Returns the largest number d such that the serialization of a LeafNode
      * with 2d entries and an InnerNode with 2d keys will fit on a single page.
+     * 返回最大的数字d，使具有2d项的LeafNode和具有2d键的InnerNode的序列化能够适合于单个页面。
      */
     public static int maxOrder(short pageSize, Type keySchema) {
         int leafOrder = LeafNode.maxOrder(pageSize, keySchema);
@@ -425,12 +490,14 @@ public class BPlusTree {
     }
 
     /** Returns the partition number that the B+ tree resides on. */
+    // 返回B+树所在的分区号。
     public int getPartNum() {
         return metadata.getPartNum();
     }
 
     /**
      * Save the new root page number and update the tree's metadata.
+     * 保存新的根页码并更新树的元数据。
      **/
     private void updateRoot(BPlusNode newRoot) {
         this.root = newRoot;
@@ -447,6 +514,7 @@ public class BPlusTree {
         buf.putInt(metadata.getOrder());
         buf.putLong(root.getPage().getPageNum());
     }
+    // 关键字的类型检查
     private void typecheck(DataBox key) {
         Type t = metadata.getKeySchema();
         if (!key.type().equals(t)) {
@@ -456,11 +524,14 @@ public class BPlusTree {
     }
 
     // Iterator ////////////////////////////////////////////////////////////////
+    // 树的迭代器
     private class BPlusTreeIterator implements Iterator<RecordId> {
+        // 定义迭代器和被迭代的对象
         private Iterator<RecordId> iter;
         private LeafNode leaf;
 
         // TODO(proj2): Add whatever fields and constructors you want here.
+        // 接收不同的scan
         public BPlusTreeIterator() {
             this(root.getLeftmostLeaf(), null);
         }

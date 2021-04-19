@@ -8,6 +8,7 @@ import edu.berkeley.cs186.database.table.Record;
 /** Metadata about a B+ tree. */
 public class BPlusTreeMetadata {
     // Table for which this B+ tree is for
+    // 这2个成员没理解,一个翻译为[这个B+树中用于的表],另一个为[B+树用作搜索键的列]
     private final String tableName;
 
     // Column that this B+ tree uses as a search key
@@ -15,6 +16,7 @@ public class BPlusTreeMetadata {
 
     // B+ trees map keys (of some type) to record ids. This is the type of the
     // keys.
+    // B+树将键(某种类型)映射到记录id。这是键的类型。
     private final Type keySchema;
 
     // The order of the tree. Given a tree of order d, its inner nodes store
@@ -22,7 +24,8 @@ public class BPlusTreeMetadata {
     // nodes store between d and 2d (key, record id) pairs. Notable exceptions
     // include the root node and leaf nodes that have been deleted from; these
     // may contain fewer than d entries.
-    // 树的阶数。给定阶数为d的树，其内部节点存储d和2d键之间以及d+1和2d+1子指针之间。
+    // 树的阶数。
+    // 给定阶数为d的树，其内部节点存储d和2d键之间以及d+1和2d+1子指针之间。
     // 叶结点存储在d和2d（键，记录ID）对之间。
     // 值得注意的例外包括已从中删除的根节点和叶节点。
     // 这些可能包含少于d个条目。
@@ -35,11 +38,14 @@ public class BPlusTreeMetadata {
     private final int partNum;
 
     // The page number of the root node.
+    // 根结点的页码
     private long rootPageNum;
 
     // The height of this tree.
-    private int height; // 树的高度
+    // 树的高度
+    private int height;
 
+    // 第一种构造方法 这个偏向于方便测试
     public BPlusTreeMetadata(String tableName, String colName, Type keySchema, int order, int partNum,
                              long rootPageNum, int height) {
         this.tableName = tableName;
@@ -51,6 +57,7 @@ public class BPlusTreeMetadata {
         this.height = height;
     }
 
+    // 第二种构造方法 这个偏向于实际使用
     public BPlusTreeMetadata(Record record) {
         this.tableName = record.getValue(0).getString();
         this.colName = record.getValue(1).getString();
@@ -66,6 +73,7 @@ public class BPlusTreeMetadata {
     /**
      * @return a record containing this B+ tree's metadata. Useful for serializing
      * metadata about the tree (see Database#getIndexInfoSchema).
+     * 用record的形式,来体现B+树的元数据, 用于序列化关于树的元数据
      */
     public Record toRecord() {
         return new Record(tableName, colName, order, partNum, rootPageNum,
@@ -74,6 +82,7 @@ public class BPlusTreeMetadata {
         );
     }
 
+    // 成员方法
     public String getTableName() {
         return tableName;
     }
