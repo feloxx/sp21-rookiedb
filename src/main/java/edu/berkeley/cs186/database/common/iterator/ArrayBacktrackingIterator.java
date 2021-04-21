@@ -4,6 +4,7 @@ import java.util.List;
 
 /**
  * Backtracking iterator over an array.
+ * 回溯数组迭代器
  */
 public class ArrayBacktrackingIterator<T> extends IndexBacktrackingIterator<T> {
     protected T[] array;
