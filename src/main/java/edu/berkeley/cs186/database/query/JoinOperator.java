@@ -13,6 +13,11 @@ import edu.berkeley.cs186.database.table.Record;
 import edu.berkeley.cs186.database.table.Schema;
 import edu.berkeley.cs186.database.table.stats.TableStats;
 
+/**
+ * 连接操作符的父类
+ * 它是一个抽象类
+ * 主要定义连接操作符的一些逻辑
+ */
 public abstract class JoinOperator extends QueryOperator {
     public enum JoinType {
         SNLJ,
@@ -25,6 +30,7 @@ public abstract class JoinOperator extends QueryOperator {
     protected JoinType joinType;
 
     // the source operators
+    // 左表和右表
     private QueryOperator leftSource;
     private QueryOperator rightSource;
 
@@ -33,6 +39,7 @@ public abstract class JoinOperator extends QueryOperator {
     private int rightColumnIndex;
 
     // join column names
+    // 左表和右表用来join的条件字段
     private String leftColumnName;
     private String rightColumnName;
 
@@ -42,6 +49,8 @@ public abstract class JoinOperator extends QueryOperator {
     /**
      * Create a join operator that pulls tuples from leftSource and rightSource.
      * Returns tuples for which leftColumnName and rightColumnName are equal.
+     * 创建一个从leftSource和rightSource提取元组的连接操作符。
+     * 返回leftColumnName和rightColumnName相等的元组。
      *
      * @param leftSource the left source operator
      * @param rightSource the right source operator
@@ -113,6 +122,7 @@ public abstract class JoinOperator extends QueryOperator {
     /**
      * Estimates the table statistics for the result of executing this query operator.
      *
+     * 执行此查询操作符的结果的表统计信息,估计值。
      * @return estimated TableStats
      */
     @Override
@@ -163,6 +173,8 @@ public abstract class JoinOperator extends QueryOperator {
      * @return the position of the column being joined on in the left relation's
      * schema. Can be used to determine which value in the left relation's records
      * to check for equality on.
+     *
+     * 返回在左侧关系的模式中连接的列的位置。可用于确定左关系记录中的哪个值要检查是否相等。
      */
     public int getLeftColumnIndex() {
         return this.leftColumnIndex;

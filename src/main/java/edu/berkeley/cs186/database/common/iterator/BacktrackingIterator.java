@@ -30,6 +30,8 @@ public interface BacktrackingIterator<T> extends Iterator<T> {
      *
      * Calling markPrev() on an iterator that has not yielded a record yet,
      * or that has not yielded a record since the last reset() call does nothing.
+     * markPrev()标记迭代器的最后一个返回值，也就是next()的最后一个返回值。
+     * 在还没有生成记录的迭代器上调用markPrev()，或者在上次reset()调用后还没有生成记录的迭代器上调用markPrev()不会产生任何结果。
      */
     void markPrev();
 
@@ -38,6 +40,8 @@ public interface BacktrackingIterator<T> extends Iterator<T> {
      * value returned by the next call of next().
      *
      * Calling markNext() on an iterator that has no records left does nothing.
+     * markNext()标记迭代器的下一个返回值，即下次调用next()所返回的值。
+     * 在没有留下记录的迭代器上调用markNext()不会做任何事情。
      */
     void markNext();
 
@@ -46,6 +50,9 @@ public interface BacktrackingIterator<T> extends Iterator<T> {
      * call to next() should return the value that was marked. If nothing has
      * been marked, reset() does nothing. You may reset() to the same point as
      * many times as desired until a new mark is set.
+     *
+     * Reset()将迭代器重置到最后标记的位置。对next()的后续调用应该返回被标记的值。
+     * 如果没有标记任何内容，则reset()不会执行任何操作。您可以根据需要多次将()重置为相同的点，直到设置一个新的标记。
      */
     void reset();
 }
