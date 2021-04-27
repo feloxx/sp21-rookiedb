@@ -23,6 +23,12 @@ public class SHJOperator extends JoinOperator {
      * then probe with all of the right records. It will fail if any of the
      * partitions are larger than the B-2 pages of memory needed to construct
      * the in memory hash table by throwing an IllegalArgumentException.
+     *
+     * 这个类表示一个简单的散列连接。为了连接这两个关系
+     * 类将尝试对左侧记录和
+     * 然后用所有正确的记录进行调查。如果有任何
+     * 分区大于构造所需的B-2内存页
+     * 通过抛出一个IllegalArgumentException来调用内存中的哈希表。
      */
     public SHJOperator(QueryOperator leftSource,
                        QueryOperator rightSource,
@@ -64,6 +70,7 @@ public class SHJOperator extends JoinOperator {
     /**
      * Partition stage. For every record in the left record iterator, hashes the
      * value we are joining on and adds that record to the correct partition.
+     * 分区的阶段。对于左记录迭代器中的每条记录，散列我们要连接的值，并将该记录添加到正确的分区。
      */
     private void partition(Partition[] partitions, Iterable<Record> leftRecords) {
         for (Record record: leftRecords) {
@@ -83,6 +90,9 @@ public class SHJOperator extends JoinOperator {
      * in rightRecords. Joins the matching records and returns them as the
      * joinedRecords list.
      *
+     * 使用leftRecords构建哈希表，并使用rightRecords中的记录匹配它。
+     * 连接匹配的记录并将它们作为joinedRecords列表返回。
+     *
      * @param partition a partition
      * @param rightRecords An iterable of records from the right relation
      */
@@ -98,6 +108,7 @@ public class SHJOperator extends JoinOperator {
         Map<DataBox, List<Record>> hashTable = new HashMap<>();
 
         // Building stage
+        // 准备哈希阶段
         for (Record leftRecord: partition) {
             DataBox leftJoinValue = leftRecord.getValue(this.getLeftColumnIndex());
             if (!hashTable.containsKey(leftJoinValue)) {
@@ -107,11 +118,13 @@ public class SHJOperator extends JoinOperator {
         }
 
         // Probing stage
+        // 匹配阶段
         for (Record rightRecord: rightRecords) {
             DataBox rightJoinValue = rightRecord.getValue(getRightColumnIndex());
             if (!hashTable.containsKey(rightJoinValue)) continue;
             // We have to join the right record with each left record with
             // a matching key
+            // 将匹配的结果都连接到joinedRecords run缓存中
             for (Record lRecord : hashTable.get(rightJoinValue)) {
                 Record joinedRecord = lRecord.concat(rightRecord);
                 // Accumulate joined records in this.joinedRecords
@@ -124,6 +137,8 @@ public class SHJOperator extends JoinOperator {
      * Runs the simple hash join algorithm. First, run the partitioning stage to
      * create an array of partitions. Then, build and probe with each hash
      * partitions records.
+     * 运行简单散列连接算法。首先，运行分区阶段来创建一个分区数组。
+     * 然后，构建并探测每个哈希分区记录。
      */
     private void run(Iterable<Record> leftRecords, Iterable<Record> rightRecords, int pass) {
         assert pass >= 1;

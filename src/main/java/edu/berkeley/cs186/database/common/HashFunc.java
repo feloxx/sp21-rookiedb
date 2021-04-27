@@ -36,8 +36,10 @@ public class HashFunc {
 
     /**
      * Applies a hash function seeded with pass to a data box
+     * 将以pass哈希因子的散列函数应用到数据框
+     *
      * @param d the data box to be hashed
-     * @param pass which pass of hashing this function belongs to.
+     * @param pass which pass of hashing this function belongs to. 是分区的意思吗?
      * @return an integer hash value. The hash value can be any 32-bit integer.
      * This includes negative values.
      */

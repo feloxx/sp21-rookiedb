@@ -14,6 +14,9 @@ import java.util.List;
  * read from. This is useful for external sorting to store records while we
  * aren't using them and free up memory. Automatically buffers reads and writes
  * to minimize I/Os incurred.
+ * 运行表示磁盘上的一段空间，我们可以向其添加记录或从中读取记录。
+ * 这对于在我们不使用记录时存储记录和释放内存的外部排序很有用。
+ * 自动缓冲读写，以最大程度地减少I/O。
  */
 public class Run implements Iterable<Record> {
     // The transaction this run will be used within
